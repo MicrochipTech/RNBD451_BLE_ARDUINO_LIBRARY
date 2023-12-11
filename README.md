@@ -1,7 +1,7 @@
 # Microchip RNBD451 Arduino Library
 
 
-<img src="Docs/IoT-Made-Easy-Logo.png" width=100>
+<img src="docs/IoT-Made-Easy-Logo.png" width=100>
 
 
 > "IoT Made Easy!" 
@@ -35,11 +35,11 @@ This is a Arduino library for using the Microchip RNBD451 BLE module with Arduin
 
 ### Example 1:
 
-![](Docs/rnbd1.PNG)
+![](Docs/rnbd1.png)
 
 ### Example 2:
 
-![](Docs/rnbd2.PNG)
+![](Docs/rnbd2.png)
 
 
 ## 2. Bill of materials<a name="step2">
