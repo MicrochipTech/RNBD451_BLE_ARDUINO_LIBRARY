@@ -3,7 +3,7 @@
 # Make a ZIP file for distribution / publishing.
 
 #VERSION=$(git describe --abbrev=0 --tags 2> /dev/null)
-VERSION=$(git describe --tags 2> /dev/null)
+VERSION=$(git describe --tags> /dev/null)
 [ -z "${VERSION}" ] && { echo "ERROR: Cannot determine version. Did you do a git-tag?"; exit 1; }
 
 FILES=$(git ls-files|grep -v .gitignore)
