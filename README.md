@@ -33,11 +33,11 @@ Checkout the <a href="https://microchipsupport.force.com/s/" target="_blank">Tec
 
 This is a Arduino library for using the Microchip RNBD451 BLE module with Arduino Zero Board. This has two arduino example projects as shown below.
 
-### Example 1:
+### Example 1: BLE UART
 
 ![](docs/rnbd1.png)
 
-### Example 2:
+### Example 2: CENTRAL & PERIPHERAL
 
 ![](docs/rnbd2.png)
 
@@ -62,6 +62,9 @@ This is a Arduino library for using the Microchip RNBD451 BLE module with Arduin
 ## 5. Board Programming<a name="step5">
 
 - Download the ZIP of this repository and add it to your [Arduino .ZIP Library](https://docs.arduino.cc/software/ide-v1/tutorials/installing-libraries#importing-a-zip-library).
+
+![](docs/zip.png)
+
 
 - Select the Programming port and upload the code.
 
