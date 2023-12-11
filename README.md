@@ -35,11 +35,11 @@ This is a Arduino library for using the Microchip RNBD451 BLE module with Arduin
 
 ### Example 1:
 
-![](Docs/rnbd1.png)
+![](docs/rnbd1.png)
 
 ### Example 2:
 
-![](Docs/rnbd2.png)
+![](docs/rnbd2.png)
 
 
 ## 2. Bill of materials<a name="step2">
