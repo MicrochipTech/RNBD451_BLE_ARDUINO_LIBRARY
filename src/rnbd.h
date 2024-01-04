@@ -31,7 +31,6 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-
 /**
  * \ingroup RNBD
  * \brief This macro defines the time needed to place RNBD device in reset.
@@ -152,6 +151,16 @@ typedef union {
   };
 } RNBD_gpio_bitmap_t;
 
+extern Uart *RNBDserial ;
+
+class BLE {
+  private:
+  int RESET_PIN;
+
+  public:
+  void setReset(int pin);
+  inline void initBleStream(Uart *stream) { RNBDserial = stream ; } ;
+
 /**
   * \ingroup RNBD
   * \brief Initializes RNBD Device
@@ -162,6 +171,7 @@ typedef union {
   * \retval true - Success
   * \retval false - Failure.
   */
+
 bool RNBD_Init(void);
 
 /**
@@ -601,5 +611,7 @@ bool RNBD_StopScanning(void);
   * \retval false - Failure
   */
 bool RNBD_BLEConnect(const char *mac, uint8_t macLen);
+
+};
 
 #endif /* RNBD_H */

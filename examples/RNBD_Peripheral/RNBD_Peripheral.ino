@@ -22,18 +22,19 @@
 */
 
 #include <Arduino.h>
-
 #include "rnbd.h"
 #include "rnbd_interface.h"
 
 #define DEFAULT_BAUDRATE 115200
 #define SERIAL_BAUDRATE 115200
+#define BLEserial Serial1
+#define USBserial Serial
+#define RST_PIN A3
 
 bool Err;
 bool initialize = false;
 const char DevName[] = "RNBD451_PERIPHERAL";
 uint8_t service_uuid = 0xC0;
-
 
 typedef enum {
   /* TODO: Define states used by the application state machine. */
@@ -54,16 +55,17 @@ typedef struct
 } RNBD_STATE;
 
 RNBD_STATE rnbd_state;
-
-
+BLE BLE_RNBD;
 
 void setup() {
-  pinMode(RESET_PIN, OUTPUT);
-  // initialize both serial ports:
-  Serial.begin(SERIAL_BAUDRATE);       //Arduino UART Serial
-  RNBDserial.begin(DEFAULT_BAUDRATE);  //RNBD UART Serial
+  BLE_RNBD.setReset(RST_PIN);
+  BLE_RNBD.initBleStream(&BLEserial);
+  //Arduino UART Serial
+  USBserial.begin(SERIAL_BAUDRATE);  
+  //RNBD UART Serial
+  BLEserial.begin(DEFAULT_BAUDRATE);  
   delay(1000);
-  Serial.println("RNBD451 PERIPHERAL");
+  USBserial.println("RNBD451 PERIPHERAL");
   rnbd_state.state = RNBD_INIT;
   initialize = true;
 }
@@ -71,7 +73,7 @@ void setup() {
 void loop() {
 
   if (initialize == true) {
-    RNBD_DP_INIT();
+    RNBD_PERIPHERAL();
   } else {
     serial_transfer();
   }
@@ -80,92 +82,92 @@ void loop() {
 void serial_transfer() {
 
   // read from RNBD451 and Print on Arduino Zero
-  if (RNBDserial.available()) {
-    String BU_data = RNBDserial.readString();
-    Serial.println(BU_data);
+  if (BLEserial.available()) {
+    String BU_data = BLEserial.readString();
+    USBserial.println(BU_data);
   }
 
   // read from Arduino Zero and Print on RNBD451
-  if (Serial.available()) {
-    String AR_data = Serial.readString();
-    RNBDserial.print(AR_data);
+  if (USBserial.available()) {
+    String AR_data = USBserial.readString();
+    BLEserial.print(AR_data);
   }
 }
 
-void RNBD_DP_INIT() {
+void RNBD_PERIPHERAL() {
 
   switch (rnbd_state.state) {
     case RNBD_INIT:
       {
-        Err = RNBD_Init();
+        Err = BLE_RNBD.RNBD_Init();
         if (Err) {
           Err = false;
-          Serial.println("RNBD451_INITIALIZING");
+          USBserial.println("RNBD451_INITIALIZING");
           rnbd_state.state = RNBD_CMD;
         }
       }
       break;
     case RNBD_CMD:
       {
-        Err = RNBD_EnterCmdMode();
+        Err = BLE_RNBD.RNBD_EnterCmdMode();
         if (Err) {
           Err = false;
-          Serial.println("Entered CMD Mode");
+          USBserial.println("Entered CMD Mode");
           rnbd_state.state = RNBD_FACTORY_RESET;
         }
       }
       break;
     case RNBD_FACTORY_RESET:
       {
-        Err = RNBD_FactoryReset();
+        Err = BLE_RNBD.RNBD_FactoryReset();
         RNBD.DelayMs(1000);
         if (Err) {
           Err = false;
-          Serial.println("Factory Reset Done");
+          USBserial.println("Factory Reset Done");
           rnbd_state.state = RNBD_CMD1;
         }
       }
       break;
     case RNBD_CMD1:
       {
-        Err = RNBD_EnterCmdMode();
+        Err = BLE_RNBD.RNBD_EnterCmdMode();
         if (Err) {
           Err = false;
-          Serial.println("Entered CMD Mode");
+          USBserial.println("Entered CMD Mode");
           rnbd_state.state = RNBD_SET_NAME;
         }
       }
       break;
     case RNBD_SET_NAME:
       {
-        Err = RNBD_SetName(DevName, strlen(DevName));
+        Err = BLE_RNBD.RNBD_SetName(DevName, strlen(DevName));
         if (Err) {
           Err = false;
-          Serial.println("Device Name Set");
+          USBserial.println("Device Name Set");
           rnbd_state.state = RNBD_SET_PROFILE;
         }
       }
       break;
     case RNBD_SET_PROFILE:
       {
-        Err = RNBD_SetServiceBitmap(service_uuid);
+        Err = BLE_RNBD.RNBD_SetServiceBitmap(service_uuid);
         if (Err) {
           Err = false;
-          Serial.println("Service Bitmap Set");
+          USBserial.println("Service Bitmap Set");
           rnbd_state.state = RNBD_REBOOT;
         }
       }
       break;
     case RNBD_REBOOT:
       {
-        Err = RNBD_RebootCmd();
+        Err = BLE_RNBD.RNBD_RebootCmd();
         RNBD.DelayMs(1500);
         if (Err) {
           Err = false;
-          Serial.println("Reboot Completed");
+          USBserial.println("Reboot Completed");
           initialize = false;
           serialFlush();
-          Serial.println("!!! Started Advertising !!!");
+          USBserial.println("!!! Started Advertising - Scan and Connect using MBD App !!!");
         }
       }
       break;    
@@ -173,10 +175,10 @@ void RNBD_DP_INIT() {
 }
 
 void serialFlush(){
-  while(RNBDserial.available() > 0) {
-    char rnbd_temp = RNBDserial.read();
+  while(BLEserial.available() > 0) {
+    char rnbd_temp = BLEserial.read();
   }
-  while(Serial.available() > 0) {
-    char serial_temp = Serial.read();
+  while(USBserial.available() > 0) {
+    char serial_temp = USBserial.read();
   }
 }

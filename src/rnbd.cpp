@@ -1,4 +1,4 @@
-/** \file rnbd.c
+/** \file rnbd.cpp
  *  \brief This file contains APIs to access features support by RNBD series devices.
  */
 /*
@@ -37,11 +37,9 @@
  * This Variable provide a definition of the RNBD devices PRE/POST status message delimiter.
  */
 static char STATUS_MESSAGE_DELIMITER = '%';
-
 static bool skip_Delimter = false;
 static char cmdBuf[64]; /**< Command TX Buffer */
 static uint8_t dummyread;
-
 static char *asyncBuffer;       /**< Async Message Buffer */
 static uint8_t asyncBufferSize; /**< Size of the Async Message Buffer */
 static char *pHead;             /**< Pointer to the Head of the Async Message Buffer */
@@ -57,26 +55,28 @@ static char resp[100];
  */
 static bool RNBD_FilterData(void);
 
-bool RNBD_Init(void) {
+void BLE::setReset(int pin) {
+  RESET_PIN = pin;
+  pinMode(RESET_PIN, OUTPUT);  
+}
+
+bool BLE::RNBD_Init(void) {
   //Enter reset
-  RNBD.ResetModule(true);
+  RNBD.ResetModule(true, RESET_PIN);
   //Wait for Reset
   RNBD.DelayMs(RNBD_RESET_DELAY_TIME);
   //Exit reset
-  RNBD.ResetModule(false);
-
+  RNBD.ResetModule(false, RESET_PIN);
   //Wait while RN Device is booting up
   RNBD.DelayMs(RNBD_STARTUP_DELAY);
-
   //Remove unread data sent by RNBD, if any
   while (RNBD.ReceiveReady()) {
     dummyread = RNBD.Read();
   }
-
   return true;
 }
 
-void RNBD_SendCmd(const char *cmd, uint8_t cmdLen) {
+void BLE::RNBD_SendCmd(const char *cmd, uint8_t cmdLen) {
   uint8_t index = 0;
 
   do {
@@ -88,11 +88,9 @@ void RNBD_SendCmd(const char *cmd, uint8_t cmdLen) {
   while (!RNBD.TransmitReady()) {}
 }
 
-uint8_t RNBD_GetCmd(const char *getCmd, uint8_t getCmdLen) {
+uint8_t BLE::RNBD_GetCmd(const char *getCmd, uint8_t getCmdLen) {
   uint8_t index = 0, ResponseTime = 0;
-
   RNBD_SendCmd(getCmd, getCmdLen);
-
   //Wait for the response time
   while (!RNBD.ReceiveReady() && ResponseTime <= RESPONSE_TIMEOUT) {
     RNBD.DelayMs(1);
@@ -109,18 +107,16 @@ uint8_t RNBD_GetCmd(const char *getCmd, uint8_t getCmdLen) {
       }
     }
   } while ((index != 0U) && (index < 255U));
-
   return index;
 }
 
-bool RNBD_ReadMsg(const char *expectedMsg, uint8_t msgLen) {
+bool BLE::RNBD_ReadMsg(const char *expectedMsg, uint8_t msgLen) {
   unsigned int ResponseRead = 0, ResponseTime = 0, ResponseCheck = 0;
   //Wait for the response time
   while (!RNBD.ReceiveReady() || ResponseTime <= RESPONSE_TIMEOUT) {
     RNBD.DelayMs(1);
     ResponseTime++;
   }
-
   //Read Ready data
   while (RNBD.ReceiveReady()) {
     resp[ResponseRead] = (char)RNBD.Read();
@@ -136,11 +132,10 @@ bool RNBD_ReadMsg(const char *expectedMsg, uint8_t msgLen) {
       return false;
     }
   }
-
   return true;
 }
 
-bool RNBD_ReadDefaultResponse(void) {
+bool BLE::RNBD_ReadDefaultResponse(void) {
   char DefaultResponse[30];
   bool status = false;
   unsigned int ResponseWait = 0, DataReadcount = 0;
@@ -158,7 +153,6 @@ bool RNBD_ReadDefaultResponse(void) {
         if ((DefaultResponse[1] == 'O') && (DefaultResponse[2] == 'K')) {
           status = true;
         }
-
         break;
       }
     case 'E':
@@ -166,7 +160,6 @@ bool RNBD_ReadDefaultResponse(void) {
         if ((DefaultResponse[1] == 'r') && (DefaultResponse[2] == 'r')) {
           status = false;
         }
-
         break;
       }
     default:
@@ -175,17 +168,14 @@ bool RNBD_ReadDefaultResponse(void) {
         break;
       }
   }
-
-
-
   return status;
 }
-bool RNBD_SendCommand_ReceiveResponse(const char *cmdMsg, uint8_t cmdLen, const char *responsemsg, uint8_t responseLen) {
+
+bool BLE::RNBD_SendCommand_ReceiveResponse(const char *cmdMsg, uint8_t cmdLen, const char *responsemsg, uint8_t responseLen) {
   unsigned int ResponseRead = 0, ResponseTime = 0, ResponseCheck = 0;
   //Flush out any unread data
   while (RNBD.ReceiveReady()) {
-    (void)RNBD.Read();
-  }  
+    (void)RNBD.Read();  }  
   //Sending Command to UART
   RNBD_SendCmd(cmdMsg, cmdLen);
   //Wait for the response time
@@ -210,7 +200,8 @@ bool RNBD_SendCommand_ReceiveResponse(const char *cmdMsg, uint8_t cmdLen, const 
   }
   return true;
 }
-bool RNBD_EnterCmdMode(void) {
+
+bool BLE::RNBD_EnterCmdMode(void) {
   const char cmdModeResponse[] = { 'C', 'M', 'D', '>', ' ' };
   cmdBuf[0] = '$';
   cmdBuf[1] = '$';
@@ -218,7 +209,7 @@ bool RNBD_EnterCmdMode(void) {
   return RNBD_SendCommand_ReceiveResponse(cmdBuf, 3U, cmdModeResponse, 5U);
 }
 
-bool RNBD_EnterDataMode(void) {
+bool BLE::RNBD_EnterDataMode(void) {
   const char dataModeResponse[] = { 'E', 'N', 'D', '\r', '\n' };
   cmdBuf[0] = '-';
   cmdBuf[1] = '-';
@@ -228,26 +219,22 @@ bool RNBD_EnterDataMode(void) {
   return RNBD_SendCommand_ReceiveResponse(cmdBuf, 5U, dataModeResponse, 5U);
 }
 
-bool RNBD_SetName(const char *name, uint8_t nameLen) {
+bool BLE::RNBD_SetName(const char *name, uint8_t nameLen) {
   uint8_t index;
   const char cmdPrompt[] = { 'A', 'O', 'K', '\r', '\n', 'C', 'M', 'D', '>', ' ' };
-
   cmdBuf[0] = 'S';
   cmdBuf[1] = 'N';
   cmdBuf[2] = ',';
-
   for (index = 0; index < nameLen; index++) {
     cmdBuf[3U + index] = name[index];
   }
   index = index + 3U;
-
   cmdBuf[index++] = '\r';
   cmdBuf[index] = '\n';
-
   return RNBD_SendCommand_ReceiveResponse(cmdBuf, nameLen + 5U, cmdPrompt, 10U);
 }
 
-bool RNBD_SetBaudRate(uint8_t baudRate) {
+bool BLE::RNBD_SetBaudRate(uint8_t baudRate) {
   uint8_t temp = (baudRate >> 4U);
   const char cmdPrompt[] = { 'A', 'O', 'K', '\r', '\n', 'C', 'M', 'D', '>', ' ' };
   cmdBuf[0] = 'S';
@@ -260,15 +247,12 @@ bool RNBD_SetBaudRate(uint8_t baudRate) {
   cmdBuf[4] = (char)temp;
   cmdBuf[5] = '\r';
   cmdBuf[6] = '\n';
-
-
   return RNBD_SendCommand_ReceiveResponse(cmdBuf, 7U, cmdPrompt, 10);
 }
 
-bool RNBD_SetServiceBitmap(uint8_t serviceBitmap) {
+bool BLE::RNBD_SetServiceBitmap(uint8_t serviceBitmap) {
   const char cmdPrompt[] = { 'A', 'O', 'K', '\r', '\n', 'C', 'M', 'D', '>', ' ' };
   uint8_t temp = (serviceBitmap >> 4);
-
   cmdBuf[0] = 'S';
   cmdBuf[1] = 'S';
   cmdBuf[2] = ',';
@@ -279,15 +263,12 @@ bool RNBD_SetServiceBitmap(uint8_t serviceBitmap) {
   cmdBuf[4] = (char)temp;
   cmdBuf[5] = '\r';
   cmdBuf[6] = '\n';
-
-
   return RNBD_SendCommand_ReceiveResponse(cmdBuf, 7U, cmdPrompt, 10U);
 }
 
-bool RNBD_SetFeaturesBitmap(uint16_t featuresBitmap) {
+bool BLE::RNBD_SetFeaturesBitmap(uint16_t featuresBitmap) {
   const char cmdPrompt[] = { 'A', 'O', 'K', '\r', '\n', 'C', 'M', 'D', '>', ' ' };
   uint8_t temp = (uint8_t)(featuresBitmap >> 12U);
-
   cmdBuf[0] = 'S';
   cmdBuf[1] = 'R';
   cmdBuf[2] = ',';
@@ -308,12 +289,10 @@ bool RNBD_SetFeaturesBitmap(uint16_t featuresBitmap) {
   cmdBuf[6] = (char)temp;
   cmdBuf[7] = '\r';
   cmdBuf[8] = '\n';
-
-
   return RNBD_SendCommand_ReceiveResponse(cmdBuf, 9U, cmdPrompt, 10U);
 }
 
-bool RNBD_SetIOCapability(uint8_t ioCapability) {
+bool BLE::RNBD_SetIOCapability(uint8_t ioCapability) {
   uint8_t temp = 0;
   const char cmdPrompt[] = { 'A', 'O', 'K', '\r', '\n', 'C', 'M', 'D', '>', ' ' };
   cmdBuf[0] = 'S';
@@ -323,31 +302,25 @@ bool RNBD_SetIOCapability(uint8_t ioCapability) {
   cmdBuf[3] = (char)temp;
   cmdBuf[4] = '\r';
   cmdBuf[5] = '\n';
-
-
   return RNBD_SendCommand_ReceiveResponse(cmdBuf, 6U, cmdPrompt, 10U);
 }
 
-bool RNBD_SetPinCode(const char *pinCode, uint8_t pinCodeLen) {
+bool BLE::RNBD_SetPinCode(const char *pinCode, uint8_t pinCodeLen) {
   const char cmdPrompt[] = { 'A', 'O', 'K', '\r', '\n', 'C', 'M', 'D', '>', ' ' };
   uint8_t index;
-
   cmdBuf[0] = 'S';
   cmdBuf[1] = 'P';
   cmdBuf[2] = ',';
-
   for (index = 0; index < pinCodeLen; index++) {
     cmdBuf[3U + index] = pinCode[index];
   }
   index = index + 3U;
   cmdBuf[index++] = '\r';
   cmdBuf[index++] = '\n';
-
-
   return RNBD_SendCommand_ReceiveResponse(cmdBuf, index, cmdPrompt, 10U);
 }
 
-bool RNBD_SetStatusMsgDelimiter(char preDelimiter, char postDelimiter) {
+bool BLE::RNBD_SetStatusMsgDelimiter(char preDelimiter, char postDelimiter) {
   const char cmdPrompt[] = { 'A', 'O', 'K', '\r', '\n', 'C', 'M', 'D', '>', ' ' };
   cmdBuf[0] = 'S';
   cmdBuf[1] = '%';
@@ -357,19 +330,15 @@ bool RNBD_SetStatusMsgDelimiter(char preDelimiter, char postDelimiter) {
   cmdBuf[5] = postDelimiter;
   cmdBuf[6] = '\r';
   cmdBuf[7] = '\n';
-
   return RNBD_SendCommand_ReceiveResponse(cmdBuf, 8, cmdPrompt, 10U);
 }
 
-
-
-bool RNBD_SetOutputs(RNBD_gpio_bitmap_t bitMap) {
+bool BLE::RNBD_SetOutputs(RNBD_gpio_bitmap_t bitMap) {
   const char cmdPrompt[] = { 'A', 'O', 'K', '\r', '\n', 'C', 'M', 'D', '>', ' ' };
   char ioHighNibble = '0';
   char ioLowNibble = '0';
   char stateHighNibble = '0';
   char stateLowNibble = '0';
-
   // Output pins configurations
   if (bitMap.ioBitMap.p1_3 != 0U) {
     ioHighNibble = '1';
@@ -385,7 +354,6 @@ bool RNBD_SetOutputs(RNBD_gpio_bitmap_t bitMap) {
     stateHighNibble = '0';
   }
   stateLowNibble = (((uint8_t)0x0F & bitMap.ioStateBitMap.gpioStateBitMap) + '0');
-
   cmdBuf[0] = '|';  // I/O
   cmdBuf[1] = 'O';  // Output
   cmdBuf[2] = ',';
@@ -396,18 +364,16 @@ bool RNBD_SetOutputs(RNBD_gpio_bitmap_t bitMap) {
   cmdBuf[7] = stateLowNibble;   // P1_2 | P3_5 | P2_4 | P2_2
   cmdBuf[8] = '\r';
   cmdBuf[9] = '\n';
-
   return RNBD_SendCommand_ReceiveResponse(cmdBuf, 10U, cmdPrompt, 10U);
 }
 
-RNBD_gpio_stateBitMap_t RNBD_GetInputsValues(RNBD_gpio_ioBitMap_t getGPIOs) {
+RNBD_gpio_stateBitMap_t BLE::RNBD_GetInputsValues(RNBD_gpio_ioBitMap_t getGPIOs) {
   uint8_t temp = 0;
   char ioHighNibble = '0';
   char ioLowNibble = '0';
   char ioValue[] = { '0', '0' };
   RNBD_gpio_stateBitMap_t ioBitMapValue;
   ioBitMapValue.gpioStateBitMap = 0x00;
-
   // Output pins configurations
   if (getGPIOs.p1_3 != 0U) {
     ioHighNibble = '1';
@@ -416,7 +382,6 @@ RNBD_gpio_stateBitMap_t RNBD_GetInputsValues(RNBD_gpio_ioBitMap_t getGPIOs) {
   }
   temp = (((uint8_t)0x0F & getGPIOs.gpioBitMap) + (uint8_t)'0');
   ioLowNibble = (char)temp;
-
   cmdBuf[0] = '|';  // I/O
   cmdBuf[1] = 'I';  // Output
   cmdBuf[2] = ',';
@@ -424,22 +389,18 @@ RNBD_gpio_stateBitMap_t RNBD_GetInputsValues(RNBD_gpio_ioBitMap_t getGPIOs) {
   cmdBuf[4] = ioLowNibble;   // P1_2 | P3_5 | P2_4 | P2_2
   cmdBuf[5] = '\r';
   cmdBuf[6] = '\n';
-
   (void)RNBD_SendCommand_ReceiveResponse(cmdBuf, 7U, ioValue, (uint8_t)sizeof(ioValue));
   ioBitMapValue.gpioStateBitMap = (((((uint8_t)ioValue[0] - (uint8_t)'0') & (uint8_t)0x0F) << 4U) | (((uint8_t)ioValue[1] - (uint8_t)'0') & (uint8_t)0x0F));
   return ioBitMapValue;
 }
 
-char *RNBD_GetRSSIValue(void) {
+char *BLE::RNBD_GetRSSIValue(void) {
   static char rssiResp[20];
   unsigned int ResponseRead = 0, ResponseTime = 0;
-
   cmdBuf[0] = 'M';
   cmdBuf[1] = '\r';
   cmdBuf[2] = '\n';
-
   RNBD_SendCmd(cmdBuf, 3U);
-
   //Wait for the response time
   while (!RNBD.ReceiveReady() || ResponseTime <= RESPONSE_TIMEOUT) {
     RNBD.DelayMs(1);
@@ -456,8 +417,7 @@ char *RNBD_GetRSSIValue(void) {
   return rssiResp;
 }
 
-
-bool RNBD_RebootCmd(void) {
+bool BLE::RNBD_RebootCmd(void) {
   bool RebootStatus = false;
   const char rebootResponse[] = { 'R', 'e', 'b', 'o', 'o', 't', 'i', 'n', 'g', '\r', '\n' };
   cmdBuf[0] = 'R';
@@ -465,15 +425,12 @@ bool RNBD_RebootCmd(void) {
   cmdBuf[2] = '1';
   cmdBuf[4] = '\r';
   cmdBuf[5] = '\n';
-
   RebootStatus = RNBD_SendCommand_ReceiveResponse(cmdBuf, 5U, rebootResponse, 11U);
-
   RNBD.DelayMs(250);
-
   return RebootStatus;
 }
 
-bool RNBD_FactoryReset(void) {
+bool BLE::RNBD_FactoryReset(void) {
   bool FactoryResetStatus = false;
   const char reboot[] = { 'R', 'e', 'b', 'o', 'o', 't', ' ', 'a', 'f', 't', 'e', 'r', ' ', 'F', 'a', 'c', 't', 'o', 'r', 'y', ' ', 'R', 'e', 's', 'e', 't', '\r', '\n' };
   cmdBuf[0] = 'S';
@@ -487,31 +444,29 @@ bool RNBD_FactoryReset(void) {
   return FactoryResetStatus;
 }
 
-bool RNBD_Disconnect(void) {
+bool BLE::RNBD_Disconnect(void) {
   cmdBuf[0] = 'K';
   cmdBuf[1] = ',';
   cmdBuf[2] = '1';
   cmdBuf[3] = '\r';
   cmdBuf[4] = '\n';
-
   RNBD_SendCmd(cmdBuf, 5U);
-
   return RNBD_ReadDefaultResponse();
 }
-void RNBD_set_StatusDelimter(char Delimter_Character) {
+void BLE::RNBD_set_StatusDelimter(char Delimter_Character) {
   STATUS_MESSAGE_DELIMITER = Delimter_Character;
 }
-char RNBD_get_StatusDelimter(void) {
+char BLE::RNBD_get_StatusDelimter(void) {
   return STATUS_MESSAGE_DELIMITER;
 }
-void RNBD_set_NoDelimter(bool value) {
+void BLE::RNBD_set_NoDelimter(bool value) {
   skip_Delimter = value;
 }
-bool RNBD_get_NoDelimter(void) {
+bool BLE::RNBD_get_NoDelimter(void) {
   return skip_Delimter;
 }
 
-bool RNBD_SetAsyncMessageHandler(char *pBuffer, uint8_t len) {
+bool BLE::RNBD_SetAsyncMessageHandler(char *pBuffer, uint8_t len) {
   if ((pBuffer != NULL) && (len > 1U)) {
     asyncBuffer = pBuffer;
     asyncBufferSize = len - 1U;
@@ -521,7 +476,7 @@ bool RNBD_SetAsyncMessageHandler(char *pBuffer, uint8_t len) {
   }
 }
 
-bool RNBD_DataReady(void) {
+bool BLE::RNBD_DataReady(void) {
   if (dataReady) {
     return true;
   }
@@ -532,7 +487,7 @@ bool RNBD_DataReady(void) {
   return false;
 }
 
-uint8_t RNBD_Read(void) {
+uint8_t BLE::RNBD_Read(void) {
   while (RNBD_DataReady() == false) {};  // Wait
   dataReady = false;
   return peek;
@@ -570,30 +525,25 @@ static bool RNBD_FilterData(void) {
   return dataReady;
 }
 
-bool RNBD_SetAppearance(const char *appearance, uint8_t appearanceLen) {
+bool BLE::RNBD_SetAppearance(const char *appearance, uint8_t appearanceLen) {
   const char cmdPrompt[] = { 'A', 'O', 'K', '\r', '\n', 'C', 'M', 'D', '>', ' ' };
   uint8_t index;
-
   cmdBuf[0] = 'S';
   cmdBuf[1] = 'D';
   cmdBuf[2] = 'A';
   cmdBuf[3] = ',';
-
   for (index = 0; index < appearanceLen; index++) {
     cmdBuf[4U + index] = appearance[index];
   }
   index = index + 4U;
   cmdBuf[index++] = '\r';
   cmdBuf[index] = '\n';
-
-
   return RNBD_SendCommand_ReceiveResponse(cmdBuf, 10U, cmdPrompt, 10U);
 }
 
-bool RNBD_SetServiceUUID(const char *uuid, uint8_t uuidLen) {
+bool BLE::RNBD_SetServiceUUID(const char *uuid, uint8_t uuidLen) {
   const char cmdPrompt[] = { 'A', 'O', 'K', '\r', '\n', 'C', 'M', 'D', '>', ' ' };
   uint8_t index;
-
   cmdBuf[0] = 'P';
   cmdBuf[1] = 'S';
   cmdBuf[2] = ',';
@@ -604,15 +554,12 @@ bool RNBD_SetServiceUUID(const char *uuid, uint8_t uuidLen) {
   index = index + 3U;
   cmdBuf[index++] = '\r';
   cmdBuf[index] = '\n';
-
-
   return RNBD_SendCommand_ReceiveResponse(cmdBuf, 9U, cmdPrompt, 10U);
 }
 
-bool RNBD_SetServiceCharacteristic(const char *service, uint8_t serviceLen) {
+bool BLE::RNBD_SetServiceCharacteristic(const char *service, uint8_t serviceLen) {
   const char cmdPrompt[] = { 'A', 'O', 'K', '\r', '\n', 'C', 'M', 'D', '>', ' ' };
   uint8_t index;
-
   cmdBuf[0] = 'P';
   cmdBuf[1] = 'C';
   cmdBuf[2] = ',';
@@ -623,20 +570,16 @@ bool RNBD_SetServiceCharacteristic(const char *service, uint8_t serviceLen) {
   index = index + 3U;
   cmdBuf[index++] = '\r';
   cmdBuf[index] = '\n';
-
-
   return RNBD_SendCommand_ReceiveResponse(cmdBuf, 15U, cmdPrompt, 10U);
 }
 
-bool RNBD_WriteLocalCharacteristic(const char *handle, uint8_t handleLen, const char *data, uint8_t dataLen) {
+bool BLE::RNBD_WriteLocalCharacteristic(const char *handle, uint8_t handleLen, const char *data, uint8_t dataLen) {
   const char cmdPrompt[] = { 'A', 'O', 'K', '\r', '\n', 'C', 'M', 'D', '>', ' ' };
   uint8_t index;
-
   cmdBuf[0] = 'S';
   cmdBuf[1] = 'H';
   cmdBuf[2] = 'W';
   cmdBuf[3] = ',';
-
   for (index = 0; index < handleLen; index++) {
     cmdBuf[4U + index] = handle[index];
   }
@@ -644,41 +587,34 @@ bool RNBD_WriteLocalCharacteristic(const char *handle, uint8_t handleLen, const 
   cmdBuf[index++] = ',';
   cmdBuf[index++] = '0';
   cmdBuf[index++] = '0';
-
   for (index = 0; index < dataLen; index++) {
     cmdBuf[11U + index] = data[index];
   }
   index = index + 11U;
   cmdBuf[index++] = '\r';
   cmdBuf[index] = '\n';
-
   return RNBD_SendCommand_ReceiveResponse(cmdBuf, 15U, cmdPrompt, 10U);
 }
 
-bool RNBD_StartScanning(void){
-
+bool BLE::RNBD_StartScanning(void){
   cmdBuf[0] = 'F';
   cmdBuf[1] = '\r';
   cmdBuf[2] = '\n';
- 
-  //Sending Command to UART
+   //Sending Command to UART
   RNBD_SendCmd(cmdBuf, 3U);
   return true;
 }
 
-bool RNBD_StopScanning(void){
-
+bool BLE::RNBD_StopScanning(void){
   cmdBuf[0] = 'x';
   cmdBuf[1] = '\r';
   cmdBuf[2] = '\n';
-
   //Sending Command to UART
   RNBD_SendCmd(cmdBuf, 3U);
   return true;
 }
   
-bool RNBD_BLEConnect(const char *mac, uint8_t macLen){
-
+bool BLE::RNBD_BLEConnect(const char *mac, uint8_t macLen){
   uint8_t index;
   cmdBuf[0] = 'C';
   cmdBuf[1] = ',';

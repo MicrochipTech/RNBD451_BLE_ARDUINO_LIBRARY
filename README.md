@@ -35,12 +35,15 @@ This is a Arduino library for using the Microchip RNBD451 BLE module with Arduin
 
 ### Example 1: BLE UART
 
+This BLE UART example Initializes the RNBD451 and starts advertising. The user can scan and connect through MBD App for data transfer via Transparent UART Service.
+
 ![](docs/rnbd1.png)
 
 ### Example 2: CENTRAL & PERIPHERAL
 
-![](docs/rnbd2.png)
+This application has two example CENTRAL and PERIPHERAL. The central device scans frequently for the peripheral device and gets connected to it. The user can exchange data between both device via serial port 
 
+![](docs/rnbd2.png)
 
 ## 2. Bill of materials<a name="step2">
 
@@ -58,20 +61,41 @@ This is a Arduino library for using the Microchip RNBD451 BLE module with Arduin
 
 - Connect the RNBD451 Module to the Mikro BUS 1 of the Arduino UNO click SHIELD.
 
+![](docs/hardware.png)
 
 ## 5. Board Programming<a name="step5">
 
-- Download the ZIP of this repository and add it to your [Arduino .ZIP Library](https://docs.arduino.cc/software/ide-v1/tutorials/installing-libraries#importing-a-zip-library).
+- Download the ZIP file of this repository and add it to your [Arduino .ZIP Library](https://docs.arduino.cc/software/ide-v1/tutorials/installing-libraries#importing-a-zip-library) as shown below.
 
 ![](docs/zip.png)
 
+- Open the example sketch for programming the board.
 
-- Select the Programming port and upload the code.
+![](docs/eg.png)
 
+- Select the programming port and upload the sketch.
+
+![](docs/port.png)
+
+### Example 1: BLE UART
+
+![](docs/BLE_UART.png)
+
+![](docs/EG_1.gif)
+
+### Example 2: CENTRAL & PERIPHERAL
+
+#### CENTRAL:
+
+![](docs/CENTRAL_TT.png)
+
+#### PERIPHERAL:
+
+![](docs/PERIPHERAL_TT.png)
 
 ## License
 
-(c) 2023 Microchip Technology Inc. and its subsidiaries. 
+	(c) 2023 Microchip Technology Inc. and its subsidiaries. 
     
     Subject to your compliance with these terms, you may use Microchip software and any 
     derivatives exclusively with Microchip products. It is your responsibility to comply with third party 

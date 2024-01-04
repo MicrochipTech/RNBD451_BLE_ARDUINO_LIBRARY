@@ -1,5 +1,5 @@
 /**
- * \file rnbd_interface.c
+ * \file rnbd_interface.cpp
  * \brief This file provides and interface between the RNBD and the hardware.
  */
 /*
@@ -26,6 +26,7 @@
 */
 #include <string.h>
 #include <stdio.h>
+#include "rnbd.h"
 #include "rnbd_interface.h"
 
 static bool connected = false, OTABegin = false, stream_open = false;  //**< RNBD connection state */
@@ -40,6 +41,7 @@ static char hexa_Number[4] = { '0', '0', '0', '0' };
 static unsigned long num = 0;
 static unsigned int RN_Payload_Size = RN_PAYLOAD_SIZE;
 static struct OTA_REQ_PARAMETER RNBD_OTA_Parameter;
+Uart *RNBDserial ;
 
 /**
  * \ingroup RNBD_INTERFACE
@@ -77,7 +79,7 @@ static unsigned long RNBD_Split_OTA_REQ_Parameter(char buffer[], unsigned int ar
  * \param value true - Reset State false - Normal State
  * \return Nothing
  */
-static void RNBD_Reset(bool value);
+static void RNBD_Reset(bool value, int pin);
 
 /**
  * \ingroup RNBD_INTERFACE
@@ -222,7 +224,6 @@ static void RNBD_Convert_DataBufferValue_Integer_to_Hexadecimal(void) {
     temp = decimalnumber / 16U;
     unsigned int r = temp * 16U;
     temp = decimalnumber - r;
-
     // converting decimal number in to a hexa decimal number
     if (temp < 10U) {
       temp = temp + 48U;
@@ -237,7 +238,6 @@ static void RNBD_Convert_DataBufferValue_Integer_to_Hexadecimal(void) {
 static unsigned long RNBD_Split_OTA_REQ_Parameter(char buffer[], unsigned int arrayindex, unsigned int length) {
   unsigned int j = 0, ota_req_incr = 0;
   ota_req_incr = arrayindex;
-
   while (j < length) {
     num <<= 8U;                                    // shift by a complete byte, equal to num *= 256
     num |= (unsigned char)buffer[ota_req_incr++];  // write the respective byte
@@ -279,20 +279,20 @@ static inline bool RNBD_is_rx_ready(void) {
 }
 
 uint8_t UART_BLE_Read(void) {
-  dummyread=RNBDserial.readBytes(readbuffer, 1);
+  dummyread=RNBDserial->readBytes(readbuffer, 1);
   return *(uint8_t*)readbuffer;
 }
 
 void UART_BLE_write(uint8_t buffer) {
-  dummyread=RNBDserial.write(&buffer, 1);
+  dummyread=RNBDserial->write(&buffer, 1);
 }
 
 bool UART_BLE_ReceiveReady(void) {
-  return RNBDserial.available() != 0U ? true : false;
+  return RNBDserial->available() != 0U ? true : false;
 }
 
 bool UART_BLE_TransmitReady(void) {
-  return RNBDserial.availableForWrite() != 0U ? true : false;
+  return RNBDserial->availableForWrite() != 0U ? true : false;
 }
 
 static inline void RNBD_Delay(uint32_t delayCount) {
@@ -301,14 +301,14 @@ static inline void RNBD_Delay(uint32_t delayCount) {
   }
 }
 
-static void RNBD_Reset(bool value) {
+static void RNBD_Reset(bool value,int pin) {
   if (true == value) 
   {
-    digitalWrite(RESET_PIN, LOW);
+    digitalWrite(pin, LOW);    
   } 
   else 
   {
-    digitalWrite(RESET_PIN, HIGH);
+    digitalWrite(pin, HIGH);
   }
 }
 

@@ -34,8 +34,6 @@
 
 /* RNBD Packet Size = RN_PAYLOAD_SIZE + 19U (Header Size) */
 #define RN_PAYLOAD_SIZE (237U)
-#define RNBDserial Serial1
-#define RESET_PIN A3
 
 /**
  * \ingroup RNBD_INTERFACE
@@ -60,7 +58,7 @@ typedef struct
   // RNBD RX_IND pin control
   void (*IndicateRx)(bool value);
   // RNBD Reset pin control
-  void (*ResetModule)(bool value);
+  void (*ResetModule)(bool value ,int pin);
   // RNBD Mode pin set
   void (*SetSystemMode)(RNBD_SYSTEM_MODES_t mode);
   // Delay API
@@ -79,7 +77,6 @@ struct OTA_REQ_PARAMETER {
   unsigned int fwimage_checksum;
   unsigned int fwimage_crc16;
 };
-
 
 /**
  * \ingroup RNBD_INTERFACE
