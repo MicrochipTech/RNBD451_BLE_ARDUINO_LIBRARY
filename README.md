@@ -6,7 +6,7 @@
 
 > "IoT Made Easy!" 
 
-Devices: **| RNBD451 | SAMD21 |**<br>
+Devices: **| RNBD451 | ARDUINO ZERO | SAMD21 |**<br>
 Features: **| BLE |**
 
 
@@ -59,7 +59,7 @@ This application has two example CENTRAL and PERIPHERAL. The central device scan
 
 ## 4. Hardware Setup<a name="step4">
 
-- Connect the RNBD451 Module to the Mikro BUS 1 of the Arduino UNO click SHIELD.
+- Connect the RNBD451 Module to the Mikro BUS 1 of the Arduino UNO click SHIELD as shown below.
 
 ![](docs/hardware.png)
 
