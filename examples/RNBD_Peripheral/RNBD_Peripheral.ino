@@ -15,6 +15,11 @@ CLAIMS RELATED TO THE SOFTWARE WILL NOT EXCEED AMOUNT OF FEES, IF ANY, YOU PAID 
 TO MICROCHIP FOR THIS SOFTWARE
 */
 
+/*
+ * This application has been tested with Arduino Zero and Adafruit Grand Central boards.
+ * It requires both Serial and Serial1 for UART communication, and uses pin A3 for reset control.
+ */
+ 
 #include <Arduino.h>
 #include "rnbd.h"
 #include "rnbd_interface.h"

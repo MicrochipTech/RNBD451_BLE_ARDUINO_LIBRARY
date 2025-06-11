@@ -35,7 +35,7 @@ static char hexa_Number[4] = { '0', '0', '0', '0' };
 static unsigned long num = 0;
 static unsigned int RN_Payload_Size = RN_PAYLOAD_SIZE;
 static struct OTA_REQ_PARAMETER RNBD_OTA_Parameter;
-Uart *RNBDserial ;
+Stream *RNBDserial ;
 
 /**
  * \ingroup RNBD_INTERFACE

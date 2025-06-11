@@ -145,7 +145,7 @@ typedef union {
   };
 } RNBD_gpio_bitmap_t;
 
-extern Uart *RNBDserial ;
+extern Stream *RNBDserial ;
 
 class BLE {
   private:
@@ -153,7 +153,7 @@ class BLE {
 
   public:
   void setReset(int pin);
-  inline void initBleStream(Uart *stream) { RNBDserial = stream ; } ;
+  inline void initBleStream(Stream *stream) { RNBDserial = stream ; } ;
 
 /**
   * \ingroup RNBD
